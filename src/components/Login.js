@@ -5,30 +5,37 @@ import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getUser } from '../redux/userSlice';
- 
+
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
- 
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.user);
- 
-  // 🔄 Redirect if already logged in
+
+  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate("/home");
     }
   }, [user, navigate]);
- 
+
   const submitHandler = async (e) => {
     e.preventDefault();
-    if (isLogin) {
-      // 🔐 LOGIN
-      try {
+
+    if (!email || !password || (!isLogin && (!name || !username))) {
+      return toast.error("Please fill in all fields.");
+    }
+
+    setLoading(true);
+    try {
+      if (isLogin) {
+        // LOGIN
         const res = await axios.post(`${USER_API_END_POINT}/login`, {
           email,
           password
@@ -38,25 +45,15 @@ const Login = () => {
           },
           withCredentials: true
         });
- 
+
         if (res.data.success) {
-          dispatch(getUser(res.data.user)); // ✅ save to Redux
+          dispatch(getUser(res.data.user));
           toast.success(res.data.message);
-          navigate("/home"); // ✅ go to home
+          navigate("/home");
         }
- 
-      } catch (error) {
-        if (error.response?.data) {
-          toast.error(error.response.data.message);
-        } else {
-          toast.error("An unexpected error occurred");
-        }
-        console.log(error);
-      }
- 
-    } else {
-      // 📝 SIGNUP
-      try {
+
+      } else {
+        // SIGNUP
         const res = await axios.post(`${USER_API_END_POINT}/register`, {
           name,
           username,
@@ -68,27 +65,29 @@ const Login = () => {
           },
           withCredentials: true
         });
- 
+
         if (res.data.success) {
           setIsLogin(true);
           toast.success(res.data.message);
         }
- 
-      } catch (error) {
-        if (error.response?.data) {
-          toast.error(error.response.data.message);
-        } else {
-          toast.error("An unexpected error occurred");
-        }
-        console.log(error);
       }
+
+    } catch (error) {
+      if (error.response?.data) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
+      console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
- 
+
   const loginSignupHandler = () => {
     setIsLogin(!isLogin);
   };
- 
+
   return (
     <div className='w-screen h-screen flex items-center justify-center'>
       <div className='flex items-center justify-evenly w-[80%]'>
@@ -110,18 +109,59 @@ const Login = () => {
           <form onSubmit={submitHandler} className='flex flex-col w-[55%]'>
             {!isLogin && (
               <>
-                <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder='Name' className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold" />
-                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder='Username' className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder='Name'
+                  autoComplete="name"
+                  className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold"
+                />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder='Username'
+                  autoComplete="username"
+                  className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold"
+                />
               </>
             )}
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder='Email' className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold" />
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder='Password' className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold" />
-            <button className='bg-[#1D9BF0] border-none py-2 my-4 rounded-full text-lg text-white'>
-              {isLogin ? "Login" : "Create Account"}
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder='Email'
+              autoComplete="email"
+              className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold"
+            />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder='Password'
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              className="outline-blue-500 border border-gray-800 px-3 py-2 rounded-full my-1 font-semibold"
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className={`bg-[#1D9BF0] border-none py-2 my-4 rounded-full text-lg text-white ${
+                loading ? "opacity-60 cursor-not-allowed" : ""
+              }`}
+            >
+              {loading
+                ? "Please wait..."
+                : isLogin
+                  ? "Login"
+                  : "Create Account"}
             </button>
             <h1>
               {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-              <span onClick={loginSignupHandler} className='font-bold text-blue-600 cursor-pointer'>
+              <span
+                onClick={loginSignupHandler}
+                className='font-bold text-blue-600 cursor-pointer'
+              >
                 {isLogin ? "Signup" : "Login"}
               </span>
             </h1>
@@ -131,5 +171,5 @@ const Login = () => {
     </div>
   );
 };
- 
+
 export default Login;
